@@ -8,7 +8,7 @@ class GenericQueryArgsSchema(ma.Schema):
         unknown = ma.INCLUDE
 
 
-class BibAttributesQueryArgsSchema(ma.Schema):
+class BibAttributesQueryArgsSchema(GenericQueryArgsSchema):
     class Meta:
         ordered = True
         unknown = ma.EXCLUDE
@@ -17,10 +17,10 @@ class BibAttributesQueryArgsSchema(ma.Schema):
     group2_inpn = ma.fields.String(missing=None)
 
 
-class BibAttributesQueryArgsSchema(ma.Schema):
+class TaxrefSearchTrg(GenericQueryArgsSchema):
     class Meta:
         ordered = True
         unknown = ma.EXCLUDE
 
-    regne = ma.fields.String(missing=None)
-    group2_inpn = ma.fields.String(missing=None)
+    add_rank = ma.fields.String(missing=None)
+    rank_limit = ma.fields.String(missing=None)

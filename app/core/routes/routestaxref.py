@@ -14,8 +14,8 @@ from flask import (
 )
 from flask.views import MethodView
 from app.core.repositories.repository import TaxrefRepository, GenericRepository
-from app.core.schemas.schemas_models import TaxrefSchema, TaxrefDetailSchema
-from app.core.schemas.schemas_requests import GenericQueryArgsSchema
+from app.core.schemas.schemas_models import TaxrefSchema, TaxrefDetailSchema, TaxrefSeachTrgSchema
+from app.core.schemas.schemas_requests import GenericQueryArgsSchema,TaxrefSearchTrg
 from app.core.schemas.schema_utils import generic_model_schema, generic_query_schema
 from app.core.models.models import VmTaxrefHierarchie
 
@@ -71,57 +71,23 @@ class TaxrefHierarchieView(MethodView):
         return data
 
 
-# blueprint = Blueprint("pr_occtax", __name__)
-
-# @blueprint.route("/taxref", methods=["GET"])
-# @json_resp
-# def get_taxref():
-#     """
-#     Get all Taxref
-
-#     .. :quickref: Taxref;
-
-#     :returns: `dict<Taxref>`
-#     """
-#     params = dict(request.args)
-#     f_data = TaxrefRepository().get_and_fromat('get_all', {"limit": 100, "offset": 0, "params": params}, True)
-#     return {
-#         "items": f_data
-#     }
-
-
-# @blueprint.route("/taxref/<int:cd_nom>", methods=["GET"])
-# @json_resp
-# def get_taxref_detail(cd_nom):
-#     """
-#     Get all Taxref
-
-#     .. :quickref: Taxref;
-
-#     :returns: `dict<Taxref>`
-#     """
-#     f_data = TaxrefRepository(
-#         schema=TaxrefDetailSchema
-#     ).get_and_fromat('get_one', {"id": cd_nom}, False)
-#     return {
-#         "items": f_data
-#     }
-
-# @blueprint.route("/distinct/<field>", methods=["GET"])
-# @json_resp
-# def get_taxref_distinct_field(field):
-#     """
-#     Get all value for distinct field
-
-#     .. :quickref: Taxref;
-
-#     :returns: `array<Value>`
-#     """
-#     data = TaxrefRepository().get_distinct_field(field)
-#     return [d[0] for d in data]
-
-
-# @blueprint.route("/allnamebylist/<string:code_liste>", methods=["GET"])
-# @json_resp
-# def get_all_taxref_name_by_liste(code_liste):
-#     pass
+@blp.route("/search/<field>/<ilike>")
+class TaxrefSearchView(MethodView):
+    @blp.response(TaxrefSeachTrgSchema(many=True))
+    @blp.arguments(TaxrefSearchTrg, location='query', as_kwargs=True)
+    def get(self, field, ilike,  **kwargs):
+        """
+        Get the first 20 result of Taxref table for a given field with an ilike query
+        Use trigram algo to add relevance
+            :params field: a Taxref column
+            :type field: str
+            :param ilike: the ilike where expression to filter
+            :type ilike:str
+            :query str add_rank: join on table BibTaxrefRank and add the column 'nom_rang' to the result
+            :query str rank_limit: return only the taxon where rank <= of the given rank (id_rang of BibTaxrefRang table)
+            :returns: Array of dict
+        """
+        # TODO add test and optimize
+        count, data = TaxrefRepository().search_trg(field, ilike, kwargs)
+        return TaxrefSeachTrgSchema(many=True).dump(data)
+        

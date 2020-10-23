@@ -44,6 +44,19 @@ class BibThemeSchema(MA.SQLAlchemyAutoSchema):
 
     attributs = MA.Nested(BibAttributsSchema, many=True)
 
+class BasicTaxrefSchema(MA.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Taxref
+        include_fk = True
+        unknown = EXCLUDE
+
+class TaxrefSeachTrgSchema(MA.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Taxref
+        include_fk = True
+        unknown = EXCLUDE
+    idx_trgm = fields.Number()
+    nom_rang = fields.String()
 
 class TaxrefSchema(MA.SQLAlchemyAutoSchema):
     class Meta:

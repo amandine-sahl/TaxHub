@@ -1,8 +1,8 @@
 import copy
-
-from sqlalchemy import select, or_
+from urllib.parse import unquote
+from sqlalchemy import select, or_, distinct, desc, func, and_
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-from app.core.models.models import Taxref, CorTaxonAttribut, BibTheme, BibAttributs
+from app.core.models.models import Taxref, CorTaxonAttribut, BibTheme, BibAttributs,BibTaxrefRang
 from app.core.schemas.schemas_models import TaxrefSchema
 from app.core.schemas.schema_utils import NUMBER_OPERATORS, DATE_OPERATORS
 from app.utils.functions import calculate_offset_page
@@ -162,6 +162,8 @@ class GenericRepository:
             pagination_params.page_size, None, pagination_params.page
         )
 
+    def process_query_to_dict(self, fields_list, values):
+        return [dict(zip(fields_list, r)) for r in values]
 
 class TaxrefRepository(GenericRepository):
     def __init__(self):
@@ -179,6 +181,54 @@ class TaxrefRepository(GenericRepository):
             copy_params.pop("has_attributes")
 
         return query, copy_params
+
+    def search_trg(self, field, search, params):
+        try:
+            fields_list = [field, "cd_nom", "cd_ref", "idx_trgm"]
+            join_on_bib_rang = False
+            if field in self._model_col:
+                value = unquote(search).replace(" ", "%")
+                column = self._model_col[field]
+
+                q = (
+                    DB.session.query(
+                        column,
+                        Taxref.cd_nom,
+                        Taxref.cd_ref,
+                        func.similarity(column, value).label("idx_trgm"),
+                    )
+                    .filter(column.ilike("%" + value + "%"))
+                    .order_by(desc("idx_trgm"))
+                )
+
+            if params.get("add_rank"):
+                fields_list.append("nom_rang")
+                q = q.join(BibTaxrefRang, Taxref.id_rang == BibTaxrefRang.id_rang)
+                q = q.add_columns(BibTaxrefRang.nom_rang)
+                join_on_bib_rang = True
+
+            if params.get("rank_limit"):
+                if not join_on_bib_rang:
+                    q = q.join(BibTaxrefRang, Taxref.id_rang == BibTaxrefRang.id_rang)
+                try:
+                    sub_q_id_rang = (
+                        DB.session.query(BibTaxrefRang.tri_rang)
+                        .filter(BibTaxrefRang.id_rang == params["rank_limit"])
+                        .one()
+                    )
+                except NoResultFound:
+                    raise
+                q = q.filter(BibTaxrefRang.tri_rang <= sub_q_id_rang[0])
+
+            count = q.count()
+            results = q.limit(20).offset(0).all()
+            
+            data = self.process_query_to_dict(fields_list=fields_list, values=results)
+
+            return (count, data)
+        except Exception as e:
+            # LOG.error(str(e))
+            raise (e)
 
 
 class BibThemeRepository(GenericRepository):
