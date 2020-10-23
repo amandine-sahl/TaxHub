@@ -1,0 +1,23 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+flake8 = "*"
+autopep8 = "*"
+
+[packages]
+flask = "*"
+flask-sqlalchemy = "*"
+flask-marshmallow = "*"
+marshmallow-sqlalchemy = "*"
+psycopg2 = "*"
+flask-cors = "*"
+werkzeug = ">=0.15.5"
+flask-smorest = "*"
+setuptools = "*"
+pypnusershub = {git = "https://github.com/PnX-SI/UsersHub-authentification-module", ref = "1.4.4"}
+flake8 = "*"
+pylint = "*"
+toml = "*"

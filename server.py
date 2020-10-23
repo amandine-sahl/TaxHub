@@ -1,66 +1,41 @@
-# coding: utf8
+import os
 from flask import Flask
 from flask_cors import CORS
+from flask_smorest import Api
+from app.utils.env import DB, MA
+from app.utils.configurations import load_config
 
-from apptax.database import db
-
-db = db
-
-app_globals = {}
-
-
-def init_app():
-    if app_globals.get('app', False):
-        app = app_globals['app']
-    else:
-        app = Flask(__name__)
-
-    with app.app_context():
-        app.config.from_pyfile('config.py')
-        db.init_app(app)
-        db.app = app
-        app.config['DB'] = db
-
-        @app.teardown_request
-        def _manage_transaction(exception):
-            if exception:
-                db.session.rollback()
-            else:
-                db.session.commit()
-            db.session.remove()
-
-        from pypnusershub import routes
-        app.register_blueprint(routes.routes, url_prefix='/api/auth')
-
-        from apptax.index import routes
-        app.register_blueprint(routes, url_prefix='/')
-
-        from apptax.taxonomie.routesbibnoms import adresses
-        app.register_blueprint(adresses, url_prefix='/api/bibnoms')
-
-        from apptax.taxonomie.routestaxref import adresses
-        app.register_blueprint(adresses, url_prefix='/api/taxref')
-
-        from apptax.taxonomie.routesbibattributs import adresses
-        app.register_blueprint(adresses, url_prefix='/api/bibattributs')
-
-        from apptax.taxonomie.routesbiblistes import adresses
-        app.register_blueprint(adresses, url_prefix='/api/biblistes')
-
-        from apptax.taxonomie.routestmedias import adresses
-        app.register_blueprint(adresses, url_prefix='/api/tmedias')
-
-        from apptax.taxonomie.routesbibtypesmedia import adresses
-        app.register_blueprint(adresses, url_prefix='/api/bibtypesmedia')
-
-        from apptax.utils.routesconfig import adresses
-        app.register_blueprint(adresses, url_prefix='/api/config')
+# init app
+app = Flask(__name__)
 
 
-    return app
 
 
-app = init_app()
+with app.app_context():
+    # load config
+    taxhub_config = load_config()
+    app.config.update(taxhub_config)
+    
+    api = Api(app)
+
+    # Bind app to DB
+    DB.init_app(app)
+    app.config["DB"] = DB
+
+    # Bind app to MA
+    MA.init_app(app)
+
+    from pypnusershub import routes
+    app.register_blueprint(routes.routes, url_prefix="/auth")
+
+    from app.core.routes.routestaxref import blp
+    api.register_blueprint(blp, url_prefix="/")
+
+    from app.core.routes.routesattributs import blp
+    api.register_blueprint(blp, url_prefix="/attributs")
+
+
 CORS(app, supports_credentials=True)
-if __name__ == '__main__':
-    app.run()
+# Run sever
+if __name__ == "__main__":
+    app.run(debug=True, port=5052)

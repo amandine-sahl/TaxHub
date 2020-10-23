@@ -5,6 +5,7 @@ settings.ini
 venv
 config.py
 .vscode
+config/config.toml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
